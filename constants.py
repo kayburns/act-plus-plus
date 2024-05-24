@@ -2,7 +2,7 @@ import pathlib
 import os
 
 ### Task parameters
-DATA_DIR = '/home/zfu/interbotix_ws/src/act/data' if os.getlogin() == 'zfu' else '/scr/tonyzhao/datasets'
+DATA_DIR = '/scr/zach/'
 SIM_TASK_CONFIGS = {
     'sim_transfer_cube_scripted':{
         'dataset_dir': DATA_DIR + '/sim_transfer_cube_scripted',
@@ -51,6 +51,62 @@ SIM_TASK_CONFIGS = {
         'num_episodes': None,
         'episode_len': 400,
         'camera_names': ['top', 'left_wrist', 'right_wrist']
+    },
+
+    'sim_transfer_cube_decoupled_3cam_scripted_GEOM0.02_SITE0.02': {
+        'dataset_dir': DATA_DIR + '/sim_transfer_cube_decoupled_3cam_scripted_GEOM0.02_SITE0.02',
+        'num_episodes': 50,
+        'episode_len': 400,
+        'camera_names': ['top', 'left_wrist', 'right_wrist']
+    },
+
+    'sim_transfer_cube_decoupled_3cam_scripted_GEOM0.005_SITE0.005': {
+        'dataset_dir': DATA_DIR + '/sim_transfer_cube_decoupled_3cam_scripted_GEOM0.005_SITE0.005_compressed',
+        'num_episodes': 6400,
+        'episode_len': 400,
+        'camera_names': ['top', 'left_wrist', 'right_wrist']
+    },
+
+    'sim_transfer_cube_decoupled_3cam_scripted_GEOM0.02_SITE0.005': {
+        'dataset_dir': DATA_DIR + '/sim_transfer_cube_decoupled_3cam_scripted_GEOM0.02_SITE0.005',
+        'num_episodes': 50,
+        'episode_len': 400,
+        'camera_names': ['top', 'left_wrist', 'right_wrist']
+    },
+
+    'sim_transfer_cube_decoupled_3cam_scripted_GEOM0.005_SITE0.02': {
+        'dataset_dir': DATA_DIR + '/sim_transfer_cube_decoupled_3cam_scripted_GEOM0.005_SITE0.02',
+        'num_episodes': 50,
+        'episode_len': 400,
+        'camera_names': ['top', 'left_wrist', 'right_wrist']
+    },
+
+    'sim_insertion_decoupled_scripted_GEOM0.01_SITE0.01': {
+        'dataset_dir': DATA_DIR + '/sim_insertion_decoupled_scripted_GEOM0.01_SITE0.01',
+        'num_episodes': 50,
+        'episode_len': 400,
+        'camera_names': ['top']
+    },
+
+    'sim_insertion_decoupled_scripted_GEOM0.01_SITE0.005': {
+        'dataset_dir': DATA_DIR + '/sim_insertion_decoupled_scripted_GEOM0.01_SITE0.005',
+        'num_episodes': 50,
+        'episode_len': 400,
+        'camera_names': ['top']
+    },
+
+    'sim_insertion_decoupled_scripted_GEOM0.005_SITE0.01': {
+        'dataset_dir': DATA_DIR + '/sim_insertion_decoupled_scripted_GEOM0.005_SITE0.01',
+        'num_episodes': 50,
+        'episode_len': 400,
+        'camera_names': ['top']
+    },
+
+    'sim_insertion_decoupled_scripted_GEOM0.005_SITE0.005': {
+        'dataset_dir': DATA_DIR + '/sim_insertion_decoupled_scripted_GEOM0.005_SITE0.005',
+        'num_episodes': 50,
+        'episode_len': 400,
+        'camera_names': ['top']
     },
 
 }
