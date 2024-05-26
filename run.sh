@@ -3,6 +3,7 @@
 #SBATCH --mem=32G
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=iris5
+#SBATCH --cpus-per-task=16
 #SBATCH --job-name="threading the needle"
 #SBATCH --time=3-0:0
 #SBATCH --account=iris
@@ -18,8 +19,6 @@ source /sailhome/kayburns/.bashrc
 conda deactivate
 conda activate dev
 cd /iris/u/kayburns/threading_the_needle/act-plus-plus/
-
-export DATA_DIR='/scr/data_incentives/'
 
 export MUJOCO_GL=egl
 python3 imitate_episodes.py \
