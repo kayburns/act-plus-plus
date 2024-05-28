@@ -30,6 +30,7 @@ class DiffusionPolicy(nn.Module):
         self.ema_power = args_override['ema_power']
         self.lr = args_override['lr']
         self.weight_decay = 0
+        self.loss_fn = args_override['loss_fn']
 
         self.num_kp = 32
         self.feature_dimension = 64
@@ -126,11 +127,20 @@ class DiffusionPolicy(nn.Module):
             
             # L2 loss
             all_l2 = F.mse_loss(noise_pred, noise, reduction='none')
-            loss = (all_l2 * ~is_pad.unsqueeze(-1)).mean()
+            all_l1 = F.l1_loss(noise_pred, noise, reduction='none')
+            l2_loss = (all_l2 * ~is_pad.unsqueeze(-1)).mean()
+            l1_loss = (all_l1 * ~is_pad.unsqueeze(-1)).mean()
 
             loss_dict = {}
-            loss_dict['l2_loss'] = loss
-            loss_dict['loss'] = loss
+            loss_dict['l2_loss'] = l2_loss
+            loss_dict['l1_loss'] = l1_loss
+
+            if self.loss_fn == 'l2':
+                loss_dict['loss'] = l2_loss
+            elif self.loss_fn == 'l1':
+                loss_dict['loss'] = l1_loss
+            else:
+                raise ValueError
 
             if self.training and self.ema is not None:
                 self.ema.step(nets)

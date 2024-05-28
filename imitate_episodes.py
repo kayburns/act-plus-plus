@@ -105,6 +105,7 @@ def main(args):
                          'num_inference_timesteps': 10,
                          'ema_power': 0.75,
                          'vq': False,
+                         'loss_fn': args['loss_fn'],
                          }
     elif policy_class == 'CNNMLP':
         policy_config = {'lr': args['lr'], 'lr_backbone': lr_backbone, 'backbone' : backbone, 'num_queries': 1,
@@ -653,6 +654,7 @@ if __name__ == '__main__':
     parser.add_argument('--future_len', action='store', type=int)
     parser.add_argument('--prediction_len', action='store', type=int)
     parser.add_argument('--logging_mode', action='store', type=str, default='online', help='wandb logging mode (options: online, offline, or disabled)', required=False)
+    parser.add_argument('--loss_fn', action='store', type=str, help='l1 or l2', required=True)
 
     # for ACT
     parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
