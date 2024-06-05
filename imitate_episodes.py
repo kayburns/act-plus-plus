@@ -57,7 +57,7 @@ def main(args):
         from constants import SIM_TASK_CONFIGS
         task_config = SIM_TASK_CONFIGS[task_name]
     else:
-        from aloha_scripts.constants import TASK_CONFIGS
+        from constants import SIM_TASK_CONFIGS as TASK_CONFIGS
         task_config = TASK_CONFIGS[task_name]
     dataset_dir = task_config['dataset_dir']
     # num_episodes = task_config['num_episodes']
@@ -150,18 +150,18 @@ def main(args):
         wandb.config.update(config)
     with open(config_path, 'wb') as f:
         pickle.dump(config, f)
-    if is_eval:
-        ckpt_names = [f'policy_last.ckpt']
-        results = []
-        for ckpt_name in ckpt_names:
-            success_rate, avg_return = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
-            # wandb.log({'success_rate': success_rate, 'avg_return': avg_return})
-            results.append([ckpt_name, success_rate, avg_return])
+    # if is_eval:
+    #     ckpt_names = [f'policy_last.ckpt']
+    #     results = []
+    #     for ckpt_name in ckpt_names:
+    #         success_rate, avg_return = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
+    #         # wandb.log({'success_rate': success_rate, 'avg_return': avg_return})
+    #         results.append([ckpt_name, success_rate, avg_return])
 
-        for ckpt_name, success_rate, avg_return in results:
-            print(f'{ckpt_name}: {success_rate=} {avg_return=}')
-        print()
-        exit()
+    #     for ckpt_name, success_rate, avg_return in results:
+    #         print(f'{ckpt_name}: {success_rate=} {avg_return=}')
+    #     print()
+    #     exit()
 
     train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, name_filter, camera_names, batch_size_train, batch_size_val, args['chunk_size'], args['skip_mirrored_data'], config['load_pretrain'], policy_class, stats_dir_l=stats_dir, sample_weights=sample_weights, train_ratio=train_ratio)
 
@@ -594,8 +594,8 @@ def train_bc(train_dataloader, val_dataloader, config):
             ckpt_name = f'policy_step_{step}_seed_{seed}.ckpt'
             ckpt_path = os.path.join(ckpt_dir, ckpt_name)
             torch.save(policy.serialize(), ckpt_path)
-            success, _ = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
-            wandb.log({'success': success}, step=step)
+            # success, _ = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
+            # wandb.log({'success': success}, step=step)
 
         # training
         policy.train()
