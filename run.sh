@@ -2,17 +2,16 @@
 #SBATCH --partition=iris-hi
 #SBATCH --mem=32G
 #SBATCH --gres=gpu:1
-#SBATCH --nodelist=iris5
-#SBATCH --cpus-per-task=16
+#SBATCH --nodelist=iris8
+#SBATCH --cpus-per-task=24
 #SBATCH --job-name="threading the needle"
 #SBATCH --time=3-0:0
 #SBATCH --account=iris
 
 export TASK_NAME=${1}
 export SEED=${2}
-export NUM_EPISODES=${3}
-export BATCH_SIZE=${4}
-export POLICY_CLASS=${5}
+export BATCH_SIZE=${3}
+export POLICY_CLASS=${4}
 export DT=$(date '+%d_%m_%Y_%H_%M_%S')
 
 source /sailhome/kayburns/.bashrc
