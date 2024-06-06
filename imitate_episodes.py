@@ -8,7 +8,7 @@ from copy import deepcopy
 from itertools import repeat
 from tqdm import tqdm
 from einops import rearrange
-import wandb
+# import wandb
 import time
 from torchvision import transforms
 
@@ -49,7 +49,7 @@ def main(args):
     validate_every = args['validate_every']
     save_every = args['save_every']
     resume_ckpt_path = args['resume_ckpt_path']
-    logging_mode = args['logging_mode']
+    # logging_mode = args['logging_mode']
 
     # get task parameters
     is_sim = task_name[:4] == 'sim_'
@@ -57,7 +57,8 @@ def main(args):
         from constants import SIM_TASK_CONFIGS
         task_config = SIM_TASK_CONFIGS[task_name]
     else:
-        from constants import SIM_TASK_CONFIGS as TASK_CONFIGS
+        # from constants import SIM_TASK_CONFIGS as TASK_CONFIGS
+        from aloha_scripts.constants import TASK_CONFIGS
         task_config = TASK_CONFIGS[task_name]
     dataset_dir = task_config['dataset_dir']
     # num_episodes = task_config['num_episodes']
@@ -145,23 +146,23 @@ def main(args):
         os.makedirs(ckpt_dir)
     config_path = os.path.join(ckpt_dir, 'config.pkl')
     expr_name = ckpt_dir.split('/')[-1]
-    if not is_eval:
-        wandb.init(project="scaling_exps", reinit=True, entity="iris-runs", name=expr_name, mode=logging_mode)
-        wandb.config.update(config)
+    # if not is_eval:
+        # wandb.init(project="scaling_exps", reinit=True, entity="iris-runs", name=expr_name, mode=logging_mode)
+        # wandb.config.update(config)
     with open(config_path, 'wb') as f:
         pickle.dump(config, f)
-    # if is_eval:
-    #     ckpt_names = [f'policy_last.ckpt']
-    #     results = []
-    #     for ckpt_name in ckpt_names:
-    #         success_rate, avg_return = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
-    #         # wandb.log({'success_rate': success_rate, 'avg_return': avg_return})
-    #         results.append([ckpt_name, success_rate, avg_return])
+    if is_eval:
+        ckpt_names = [f'policy_step_150000_seed_1.ckpt']
+        results = []
+        for ckpt_name in ckpt_names:
+            success_rate, avg_return = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
+            # wandb.log({'success_rate': success_rate, 'avg_return': avg_return})
+            results.append([ckpt_name, success_rate, avg_return])
 
-    #     for ckpt_name, success_rate, avg_return in results:
-    #         print(f'{ckpt_name}: {success_rate=} {avg_return=}')
-    #     print()
-    #     exit()
+        for ckpt_name, success_rate, avg_return in results:
+            print(f'{ckpt_name}: {success_rate=} {avg_return=}')
+        print()
+        exit()
 
     train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, name_filter, camera_names, batch_size_train, batch_size_val, args['chunk_size'], args['skip_mirrored_data'], config['load_pretrain'], policy_class, stats_dir_l=stats_dir, sample_weights=sample_weights, train_ratio=train_ratio)
 
@@ -298,7 +299,7 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
     if real_robot:
         from aloha_scripts.robot_utils import move_grippers # requires aloha
         from aloha_scripts.real_env import make_real_env # requires aloha
-        env = make_real_env(init_node=True, setup_robots=True, setup_base=True)
+        env = make_real_env(init_node=True)
         env_max_reward = 0
     else:
         from sim_env import make_sim_env
@@ -347,6 +348,10 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
         rewards = []
         # if use_actuator_net:
         #     norm_episode_all_base_actions = [actuator_norm(np.zeros(history_len, 2)).tolist()]
+        start_time = time.time()
+        initial_time = None
+        delta_time = 0
+
         with torch.inference_mode():
             time0 = time.time()
             DT = 1 / FPS
@@ -454,13 +459,36 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
                 # print('post process: ', time.time() - time4)
 
                 ### step the environment
+                mid_time = time.time()
                 time5 = time.time()
                 if real_robot:
-                    ts = env.step(target_qpos, base_action)
+                    if (t + 1) % query_frequency != 0:
+                        ts = env.step(
+                            target_qpos,
+                            no_sleep=t % query_frequency == 0,
+                            sleep_time=(
+                                max(0, 0.0195 - (mid_time - start_time))
+                            )
+                        )
+                    else:
+                        ts = env.step(
+                            target_qpos,
+                            no_sleep=t % query_frequency == 0,
+                            sleep_time=(
+                                min(0.0195, max(0.005, 0.0195 - delta_time - (mid_time - start_time)))
+                            )
+                        )
+                        if delta_time > 0:
+                            delta_time = 0
                 else:
                     ts = env.step(target_qpos)
                 # print('step env: ', time.time() - time5)
 
+                ### timing
+                end_time = time.time()
+                delta_time += (end_time - start_time) - 0.02
+
+                start_time = time.time()
                 ### for visualization
                 qpos_list.append(qpos_numpy)
                 target_qpos_list.append(target_qpos)
@@ -581,7 +609,7 @@ def train_bc(train_dataloader, val_dataloader, config):
                     best_ckpt_info = (step, min_val_loss, deepcopy(policy.serialize()))
             for k in list(validation_summary.keys()):
                 validation_summary[f'val_{k}'] = validation_summary.pop(k)            
-            wandb.log(validation_summary, step=step)
+            # wandb.log(validation_summary, step=step)
             print(f'Val loss:   {epoch_val_loss:.5f}')
             summary_string = ''
             for k, v in validation_summary.items():
@@ -606,7 +634,7 @@ def train_bc(train_dataloader, val_dataloader, config):
         loss = forward_dict['loss']
         loss.backward()
         optimizer.step()
-        wandb.log(forward_dict, step=step) # not great, make training 1-2% slower
+        # wandb.log(forward_dict, step=step) # not great, make training 1-2% slower
 
         if step % save_every == 0:
             ckpt_path = os.path.join(ckpt_dir, f'policy_step_{step}_seed_{seed}.ckpt')
@@ -652,7 +680,7 @@ if __name__ == '__main__':
     parser.add_argument('--history_len', action='store', type=int)
     parser.add_argument('--future_len', action='store', type=int)
     parser.add_argument('--prediction_len', action='store', type=int)
-    parser.add_argument('--logging_mode', action='store', type=str, default='online', help='wandb logging mode (options: online, offline, or disabled)', required=False)
+    # parser.add_argument('--logging_mode', action='store', type=str, default='online', help='wandb logging mode (options: online, offline, or disabled)', required=False)
 
     # for ACT
     parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
