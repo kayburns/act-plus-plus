@@ -2,7 +2,22 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="41d1aa7b-9c53-4a67-8608-30740af32e61" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/act-plus-plus.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ckpt_dir_test/config.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ckpt_dir_test/dataset_stats.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ckpt_dir_test/policy_step_150000_seed_1.ckpt" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/policy_step_150000_seed_1.ckpt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/imitate_episodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/imitate_episodes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/launch.sh" beforeDir="false" afterPath="$PROJECT_DIR$/launch.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/policy.py" beforeDir="false" afterPath="$PROJECT_DIR$/policy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -21,13 +36,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "last_opened_file_path": "/home/tonyzhao/interbotix_ws/src/act-plus-plus"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/tonyzhao/interbotix_ws/src/act-plus-plus&quot;
   }
-}]]></component>
+}</component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
