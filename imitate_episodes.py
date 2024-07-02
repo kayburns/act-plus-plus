@@ -23,6 +23,7 @@ from visualize_episodes import save_videos
 from detr.models.latent_model import Latent_Model_Transformer
 
 from sim_env import BOX_POSE
+from dm_env import TimeStep, StepType
 
 import IPython
 e = IPython.embed
@@ -69,7 +70,10 @@ def main(args):
     name_filter = task_config.get('name_filter', lambda n: True)
 
     # fixed parameters
-    state_dim = 14
+    if "tool_hang" in task_name:
+        state_dim = 2
+    else:
+        state_dim = 14
     lr_backbone = 1e-5
     backbone = 'resnet18'
     if policy_class == 'ACT':
@@ -90,7 +94,8 @@ def main(args):
                          'vq': args['use_vq'],
                          'vq_class': args['vq_class'],
                          'vq_dim': args['vq_dim'],
-                         'action_dim': 16,
+                         'action_dim': 9,#16,
+                        #  'action_dim': 16,
                          'no_encoder': args['no_encoder'],
                          }
     elif policy_class == 'Diffusion':
@@ -155,7 +160,7 @@ def main(args):
         results = []
         for ckpt_name in ckpt_names:
             success_rate, avg_return = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
-            # wandb.log({'success_rate': success_rate, 'avg_return': avg_return})
+            wandb.log({'success_rate': success_rate, 'avg_return': avg_return})
             results.append([ckpt_name, success_rate, avg_return])
 
         for ckpt_name, success_rate, avg_return in results:
@@ -205,6 +210,7 @@ def make_optimizer(policy_class, policy):
 
 
 def get_image(ts, camera_names, rand_crop_resize=False):
+    import pdb; pdb.set_trace()
     curr_images = []
     for cam_name in camera_names:
         curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
@@ -224,6 +230,18 @@ def get_image(ts, camera_names, rand_crop_resize=False):
         curr_image = curr_image.unsqueeze(0)
     
     return curr_image
+
+def standardize_timestep(ts):
+    """Ensure the timestep is a dm_env TimeStep with the required attributes."""
+    if isinstance(ts, dict):
+        return TimeStep(
+            step_type=StepType.FIRST,
+            reward=None,
+            discount=None,
+            observation=ts
+        )
+    return ts
+
 
 
 def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
@@ -294,6 +312,7 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
     else:
         post_process = lambda a: a * stats['action_std'] + stats['action_mean']
 
+
     # load environment
     if real_robot:
         from aloha_scripts.robot_utils import move_grippers # requires aloha
@@ -303,7 +322,11 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
     else:
         from sim_env import make_sim_env
         env = make_sim_env(task_name)
-        env_max_reward = env.task.max_reward
+        
+        try:
+            env_max_reward = env.task.max_reward
+        except:
+            env_max_reward = env.reward_scale
 
     query_frequency = policy_config['num_queries']
     if temporal_agg:
@@ -326,8 +349,12 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
             BOX_POSE[0] = sample_box_pose() # used in sim reset
         elif 'sim_insertion' in task_name:
             BOX_POSE[0] = np.concatenate(sample_insertion_pose()) # used in sim reset
+        elif 'tool_hang' in task_name:
+            pass
 
         ts = env.reset()
+        ts = standardize_timestep(ts)
+        # import pdb; pdb.set_trace()
 
         ### onscreen render
         if onscreen_render:
@@ -340,6 +367,7 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
             all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, 16]).cuda()
 
         # qpos_history = torch.zeros((1, max_timesteps, state_dim)).cuda()
+
         qpos_history_raw = np.zeros((max_timesteps, state_dim))
         image_list = [] # for visualization
         qpos_list = []
@@ -364,9 +392,15 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
                 obs = ts.observation
                 if 'images' in obs:
                     image_list.append(obs['images'])
+                elif 'agentview_image' in obs:
+                    image_list.append(obs['agentview_image'])
                 else:
                     image_list.append({'main': obs['image']})
-                qpos_numpy = np.array(obs['qpos'])
+                if 'robot0_gripper_qpos' in obs:
+                    qpos_numpy = obs['robot0_gripper_qpos']
+                else:
+                    qpos_numpy = np.zeros(state_dim)  # Default/fallback value
+                import pdb; pdb.set_trace()
                 qpos_history_raw[t] = qpos_numpy
                 qpos = pre_process(qpos_numpy)
                 qpos = torch.from_numpy(qpos).float().cuda().unsqueeze(0)

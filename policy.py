@@ -100,6 +100,7 @@ class DiffusionPolicy(nn.Module):
             for cam_id in range(len(self.camera_names)):
                 cam_image = image[:, cam_id]
                 cam_features = nets['policy']['backbones'][cam_id](cam_image)
+                # import pdb; pdb.set_trace()
                 pool_features = nets['policy']['pools'][cam_id](cam_features)
                 pool_features = torch.flatten(pool_features, start_dim=1)
                 out_features = nets['policy']['linears'][cam_id](pool_features)

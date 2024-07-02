@@ -88,7 +88,10 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
             # self.is_sim = is_sim
             padded_action = np.zeros((self.max_episode_len, original_action_shape[1]), dtype=np.float32)
-            padded_action[:action_len] = action
+            if action_len < padded_action.shape[0]:
+                padded_action[:action_len] = action
+            else:
+                padded_action = action
             is_pad = np.zeros(self.max_episode_len)
             is_pad[action_len:] = 1
 
@@ -106,7 +109,6 @@ class EpisodicDataset(torch.utils.data.Dataset):
             qpos_data = torch.from_numpy(qpos).float()
             action_data = torch.from_numpy(padded_action).float()
             is_pad = torch.from_numpy(is_pad).bool()
-
             # channel last
             image_data = torch.einsum('k h w c -> k c h w', image_data)
 
@@ -138,7 +140,8 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
             qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
 
-        except:
+        except Exception as e: 
+            print(e)
             print(f'Error loading {dataset_path} in __getitem__')
             quit()
 
@@ -265,8 +268,8 @@ def load_data(dataset_dir_l, name_filter, camera_names, batch_size_train, batch_
     train_num_workers = 16 if train_dataset.augment_images else 2
     val_num_workers = 8 if train_dataset.augment_images else 2
     print(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
-    train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler_train, pin_memory=True, num_workers=train_num_workers, prefetch_factor=2)
-    val_dataloader = DataLoader(val_dataset, batch_sampler=batch_sampler_val, pin_memory=True, num_workers=val_num_workers, prefetch_factor=2)
+    train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler_train, pin_memory=True, num_workers=0)# prefetch_factor=2)
+    val_dataloader = DataLoader(val_dataset, batch_sampler=batch_sampler_val, pin_memory=True, num_workers=0)# prefetch_factor=2)
 
     return train_dataloader, val_dataloader, norm_stats, train_dataset.is_sim
 
