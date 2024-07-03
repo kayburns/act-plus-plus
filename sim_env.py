@@ -16,10 +16,132 @@ from constants import PUPPET_GRIPPER_VELOCITY_NORMALIZE_FN
 import robosuite
 from robosuite.controllers.controller_factory import load_controller_config
 
+from typing import List, Optional
+from matplotlib.pyplot import fill
+import gym
+from gym import spaces
+from omegaconf import OmegaConf
+from robomimic.envs.env_robosuite import EnvRobosuite
+
+
 import IPython
 e = IPython.embed
 
 BOX_POSE = [None] # to be changed from outside
+
+class RobomimicImageWrapper(gym.Env):
+    def __init__(self, 
+        env: EnvRobosuite,
+        shape_meta: dict,
+        init_state: Optional[np.ndarray]=None,
+        render_obs_key='robot0_eye_in_hand_image',
+        ):
+
+        self.env = env
+        self.render_obs_key = render_obs_key
+        self.init_state = init_state
+        self.seed_state_map = dict()
+        self._seed = None
+        self.shape_meta = shape_meta
+        self.render_cache = None
+        self.has_reset_before = False
+        self.reward_scale = 1
+        
+        
+        # setup spaces
+        action_shape = shape_meta['action']['shape']
+        action_space = spaces.Box(
+            low=-1,
+            high=1,
+            shape=action_shape,
+            dtype=np.float32
+        )
+        self.action_space = action_space
+
+        observation_space = spaces.Dict()
+        for key, value in shape_meta['obs'].items():
+            shape = value['shape']
+            min_value, max_value = -1, 1
+            if key.endswith('image'):
+                min_value, max_value = 0, 1
+            elif key.endswith('quat'):
+                min_value, max_value = -1, 1
+            elif key.endswith('qpos'):
+                min_value, max_value = -1, 1
+            elif key.endswith('pos'):
+                # better range?
+                min_value, max_value = -1, 1
+            else:
+                raise RuntimeError(f"Unsupported type {key}")
+            
+            this_space = spaces.Box(
+                low=min_value,
+                high=max_value,
+                shape=shape,
+                dtype=np.float32
+            )
+            observation_space[key] = this_space
+        self.observation_space = observation_space
+
+
+    def get_observation(self, raw_obs=None):
+        if raw_obs is None:
+            raw_obs = self.env.get_observation()
+        
+        self.render_cache = raw_obs[self.render_obs_key]
+
+        obs = dict()
+        for key in self.observation_space.keys():
+            obs[key] = raw_obs[key]
+        return obs
+
+    def seed(self, seed=None):
+        np.random.seed(seed=seed)
+        self._seed = seed
+    
+    def reset(self):
+        if self.init_state is not None:
+            if not self.has_reset_before:
+                # the env must be fully reset at least once to ensure correct rendering
+                self.env.reset()
+                self.has_reset_before = True
+
+            # always reset to the same state
+            # to be compatible with gym
+            raw_obs = self.env.reset_to({'states': self.init_state})
+        elif self._seed is not None:
+            # reset to a specific seed
+            seed = self._seed
+            if seed in self.seed_state_map:
+                # env.reset is expensive, use cache
+                raw_obs = self.env.reset_to({'states': self.seed_state_map[seed]})
+            else:
+                # robosuite's initializes all use numpy global random state
+                np.random.seed(seed=seed)
+                raw_obs = self.env.reset()
+                state = self.env.get_state()['states']
+                self.seed_state_map[seed] = state
+            self._seed = None
+        else:
+            # random reset
+            raw_obs = self.env.reset()
+
+        # return obs
+        obs = self.get_observation(raw_obs)
+        return obs
+    
+    def step(self, action):
+        raw_obs, reward, done, info = self.env.step(action)
+        obs = self.get_observation(raw_obs)
+        return obs, reward, done, info
+    
+    def render(self, mode='rgb_array'):
+        if self.render_cache is None:
+            raise RuntimeError('Must run reset or step before render.')
+        img = np.moveaxis(self.render_cache, 0, -1)
+        img = (img * 255).astype(np.uint8)
+        return img
+
 
 def make_sim_env(task_name):
     """
@@ -56,7 +178,7 @@ def make_sim_env(task_name):
 
         env = robosuite.make(
             "ToolHang",
-            robots=["Sawyer"],             # load a Sawyer robot and a Panda robot
+            robots=["Panda"],             # load a Sawyer robot and a Panda robot
             gripper_types="default",                # use default grippers per robot arm
             controller_configs=controller_config,   # each arm is controlled using OSC
             env_configuration="single-arm-opposed", # (two-arm envs only) arms face each other
@@ -66,11 +188,41 @@ def make_sim_env(task_name):
             horizon=200,                            # each episode terminates after 200 steps
             use_object_obs=False,                   # don't provide object observations to agent
             use_camera_obs=True,                   # provide image observations to agent
-            camera_names="agentview",               # use "agentview" camera for observations
-            camera_heights=84,                      # image height
-            camera_widths=84,                       # image width
+            camera_names=["robot0_eye_in_hand", "sideview"],               # use "agentview" camera for observations
+            camera_heights=240,                      # image height
+            camera_widths=240,                       # image width
             reward_shaping=True,                    # use a dense reward signal for learning
         )
+
+        shape_meta = {
+            "obs": {
+                "sideview_image": {
+                    "shape": [3, 240, 240],
+                    "type": "rgb"
+                },
+                "robot0_eye_in_hand_image": {
+                    "shape": [3, 240, 240],
+                    "type": "rgb"
+                },
+                "robot0_eef_pos": {
+                    "shape": [3],
+                    "type": "low_dim"
+                },
+                "robot0_eef_quat": {
+                    "shape": [4],
+                    "type": "low_dim"
+                },
+                "robot0_gripper_qpos": {
+                    "shape": [2],
+                    "type": "low_dim"
+                }
+            },
+            "action": {
+                "shape": [7]
+            }
+        }
+
+        env = RobomimicImageWrapper(env, shape_meta=shape_meta)
         # env = robosuite.make(
         #     "ToolHang",
         #     robots=["Sawyer"],             # load a Sawyer robot and a Panda robot

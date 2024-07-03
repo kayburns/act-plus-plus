@@ -210,11 +210,16 @@ def make_optimizer(policy_class, policy):
 
 
 def get_image(ts, camera_names, rand_crop_resize=False):
-    import pdb; pdb.set_trace()
     curr_images = []
-    for cam_name in camera_names:
-        curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
-        curr_images.append(curr_image)
+    if 'sideview_image' in camera_names:
+        camera_names = ["robot0_eye_in_hand_image", "sideview_image"]
+        for cam_name in camera_names:
+            curr_image = rearrange(ts.observation[cam_name], 'h w c -> c h w')
+            curr_images.append(curr_image)
+    else:
+        for cam_name in camera_names:
+            curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
+            curr_images.append(curr_image)
     curr_image = np.stack(curr_images, axis=0)
     curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
 
@@ -354,7 +359,6 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
 
         ts = env.reset()
         ts = standardize_timestep(ts)
-        # import pdb; pdb.set_trace()
 
         ### onscreen render
         if onscreen_render:
@@ -392,15 +396,14 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
                 obs = ts.observation
                 if 'images' in obs:
                     image_list.append(obs['images'])
-                elif 'agentview_image' in obs:
-                    image_list.append(obs['agentview_image'])
+                elif 'sideview_image' in obs:
+                    image_list.append({'robot0_eye_in_hand_image': obs['robot0_eye_in_hand_image'], 'sideview_image': obs['sideview_image']})
                 else:
                     image_list.append({'main': obs['image']})
                 if 'robot0_gripper_qpos' in obs:
                     qpos_numpy = obs['robot0_gripper_qpos']
                 else:
                     qpos_numpy = np.zeros(state_dim)  # Default/fallback value
-                import pdb; pdb.set_trace()
                 qpos_history_raw[t] = qpos_numpy
                 qpos = pre_process(qpos_numpy)
                 qpos = torch.from_numpy(qpos).float().cuda().unsqueeze(0)
@@ -492,6 +495,7 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
                 if real_robot:
                     ts = env.step(target_qpos, base_action)
                 else:
+                    import pdb; pdb.set_trace()
                     ts = env.step(target_qpos)
                 # print('step env: ', time.time() - time5)
 
