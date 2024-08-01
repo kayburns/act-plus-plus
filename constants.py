@@ -110,11 +110,25 @@ SIM_TASK_CONFIGS = {
     },
 
     'sim_tool_hang': {
-        'dataset_dir': DATA_DIR + '/sim_tool_hang_2',
+        'dataset_dir': DATA_DIR + '/sim_tool_hang',
         'num_episodes': 50,
         'episode_len': 400,
         'camera_names': ['eye_in_hand_image', 'sideview_image']
     },
+
+    'aloha_fork_pass_in_cup': {
+        'dataset_dir': DATA_DIR + '/aloha_fork_pass_in_cup',
+        'num_episodes': None,
+        'episode_len': None,
+        'camera_names': ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist'],
+    },
+
+    'aloha_thread_blue_needle_glue': {
+        'dataset_dir': DATA_DIR + '/aloha_thread_blue_needle_glue',
+        'num_episodes': 50,
+        'episode_len': 1500,
+        'camera_names': ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist'],
+    }
 
 }
 

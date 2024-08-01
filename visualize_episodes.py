@@ -15,6 +15,7 @@ STATE_NAMES = JOINT_NAMES + ["gripper"]
 
 def load_hdf5(dataset_dir, dataset_name):
     dataset_path = os.path.join(dataset_dir, dataset_name + '.hdf5')
+
     if not os.path.isfile(dataset_path):
         print(f'Dataset does not exist at \n{dataset_path}\n')
         exit()
@@ -67,6 +68,8 @@ def save_videos(video, dt, video_path=None):
         cam_names = list(video.keys())
         cam_names = sorted(cam_names)
         all_cam_videos = []
+        print(cam_names)
+        print(video['cam_low'].shape, video['cam_right_wrist'].shape)
         for cam_name in cam_names:
             all_cam_videos.append(video[cam_name])
         all_cam_videos = np.concatenate(all_cam_videos, axis=2) # width dimension
