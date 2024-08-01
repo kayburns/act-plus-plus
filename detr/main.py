@@ -63,12 +63,13 @@ def get_args_parser():
     parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
     parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
     parser.add_argument('--temporal_agg', action='store_true')
+    parser.add_argument('--fine_tune_last_layers', action='store_true')
     parser.add_argument('--logging_mode', action='store', type=str, default='online', help='wandb logging mode (options: online, offline, or disabled)', required=False)
     
     parser.add_argument('--use_vq', action='store_true')
     parser.add_argument('--vq_class', action='store', type=int, help='vq_class', required=False)
     parser.add_argument('--vq_dim', action='store', type=int, help='vq_dim', required=False)
-    parser.add_argument('--load_pretrain', action='store_true', default=False)
+    parser.add_argument('--load_pretrain', action='store', type=str, default=None, required=False)
     parser.add_argument('--action_dim', action='store', type=int, required=False)
     parser.add_argument('--eval_every', action='store', type=int, default=500, help='eval_every', required=False)
     parser.add_argument('--validate_every', action='store', type=int, default=500, help='validate_every', required=False)
@@ -94,13 +95,19 @@ def build_ACT_model_and_optimizer(args_override):
     model = build_ACT_model(args)
     model.cuda()
 
-    param_dicts = [
-        {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
-        {
-            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
-            "lr": args.lr_backbone,
-        },
-    ]
+    if args.fine_tune_last_layers:
+        for n, p in model.named_parameters():
+            if "is_pad_head" not in n and "action_head" not in n:
+                p.requires_grad = False
+        param_dicts = [{"params": [p for _, p in model.named_parameters() if p.requires_grad]}]
+    else:
+        param_dicts = [
+            {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+            {
+                "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+                "lr": args.lr_backbone,
+            },
+        ]
     optimizer = torch.optim.AdamW(param_dicts, lr=args.lr,
                                   weight_decay=args.weight_decay)
 

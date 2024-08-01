@@ -92,6 +92,7 @@ def main(args):
                          'vq_dim': args['vq_dim'],
                          'action_dim': 16,
                          'no_encoder': args['no_encoder'],
+                         'fine_tune_last_layers': args['fine_tune_last_layers'],
                          }
     elif policy_class == 'Diffusion':
 
@@ -547,7 +548,7 @@ def train_bc(train_dataloader, val_dataloader, config):
 
     policy = make_policy(policy_class, policy_config)
     if config['load_pretrain']:
-        loading_status = policy.deserialize(torch.load(os.path.join('/home/zfu/interbotix_ws/src/act/ckpts/pretrain_all', 'policy_step_50000_seed_0.ckpt')))
+        loading_status = policy.deserialize(torch.load(config['load_pretrain']))
         print(f'loaded! {loading_status}')
     if config['resume_ckpt_path'] is not None:
         loading_status = policy.deserialize(torch.load(config['resume_ckpt_path']))
@@ -642,7 +643,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', action='store', type=int, help='seed', required=True)
     parser.add_argument('--num_steps', action='store', type=int, help='num_steps', required=True)
     parser.add_argument('--lr', action='store', type=float, help='lr', required=True)
-    parser.add_argument('--load_pretrain', action='store_true', default=False)
+    parser.add_argument('--load_pretrain', action='store', type=str, default=None, required=False)
     parser.add_argument('--eval_every', action='store', type=int, default=500, help='eval_every', required=False)
     parser.add_argument('--validate_every', action='store', type=int, default=500, help='validate_every', required=False)
     parser.add_argument('--save_every', action='store', type=int, default=500, help='save_every', required=False)
@@ -652,6 +653,7 @@ if __name__ == '__main__':
     parser.add_argument('--history_len', action='store', type=int)
     parser.add_argument('--future_len', action='store', type=int)
     parser.add_argument('--prediction_len', action='store', type=int)
+    parser.add_argument('--fine_tune_last_layers', action='store_true')
     parser.add_argument('--logging_mode', action='store', type=str, default='online', help='wandb logging mode (options: online, offline, or disabled)', required=False)
 
     # for ACT
