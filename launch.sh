@@ -1,7 +1,7 @@
-task_names=("aloha_fork_pass_in_cup")
-# task_names=("aloha_thread_blue_needle_glue")
+# task_names=("aloha_fork_pass_in_cup")
+task_names=("aloha_thread_blue_needle_glue")
 seeds=("1")
-batch_sizes=("16")
+batch_sizes=("32")
 policy_classes=("ACT")
 # policy_classes=("ACT")
 
