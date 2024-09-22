@@ -24,6 +24,8 @@ from detr.models.latent_model import Latent_Model_Transformer
 
 from sim_env import BOX_POSE
 
+# import cProfile
+
 import IPython
 e = IPython.embed
 
@@ -146,11 +148,12 @@ def main(args):
         os.makedirs(ckpt_dir)
     config_path = os.path.join(ckpt_dir, 'config.pkl')
     expr_name = ckpt_dir.split('/')[-1]
-    if not is_eval:
+    if True:#not is_eval:
         wandb.init(project="scaling_exps", reinit=True, entity="iris-runs", name=expr_name, mode=logging_mode)
         wandb.config.update(config)
     with open(config_path, 'wb') as f:
         pickle.dump(config, f)
+        
     # if is_eval:
     #     ckpt_names = [f'policy_last.ckpt']
     #     results = []
@@ -247,6 +250,7 @@ def eval_bc(config, ckpt_name, save_episode=True, num_rollouts=50):
     # load policy and stats
     ckpt_path = os.path.join(ckpt_dir, ckpt_name)
     policy = make_policy(policy_class, policy_config)
+    # import pdb; pdb.set_trace()
     loading_status = policy.deserialize(torch.load(ckpt_path))
     print(loading_status)
     policy.cuda()
@@ -564,7 +568,7 @@ def train_bc(train_dataloader, val_dataloader, config):
         # validation
         if step % validate_every == 0:
             print('validating')
-
+            # import pdb; pdb.set_trace()
             with torch.inference_mode():
                 policy.eval()
                 validation_dicts = []
@@ -581,7 +585,7 @@ def train_bc(train_dataloader, val_dataloader, config):
                     min_val_loss = epoch_val_loss
                     best_ckpt_info = (step, min_val_loss, deepcopy(policy.serialize()))
             for k in list(validation_summary.keys()):
-                validation_summary[f'val_{k}'] = validation_summary.pop(k)            
+                validation_summary[f'val_{k}'] = validation_summary.pop(k)       
             wandb.log(validation_summary, step=step)
             print(f'Val loss:   {epoch_val_loss:.5f}')
             summary_string = ''
@@ -667,4 +671,5 @@ if __name__ == '__main__':
     parser.add_argument('--vq_dim', action='store', type=int, help='vq_dim')
     parser.add_argument('--no_encoder', action='store_true')
     
+    # cProfile.run("main(vars(parser.parse_args()))", sort=-1)
     main(vars(parser.parse_args()))

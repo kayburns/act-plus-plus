@@ -2,7 +2,7 @@ import pathlib
 import os
 
 ### Task parameters
-DATA_DIR = '/scr/optometrists/'
+DATA_DIR = '/scr/zach/'
 SIM_TASK_CONFIGS = {
     'sim_transfer_cube_scripted':{
         'dataset_dir': DATA_DIR + '/sim_transfer_cube_scripted',
@@ -110,7 +110,7 @@ SIM_TASK_CONFIGS = {
     },
 
     'aloha_thread_blue_needle_glue': {
-        'dataset_dir': DATA_DIR + '/aloha_thread_blue_needle_glue',
+        'dataset_dir': DATA_DIR + '/blue_needle_filtered',
         'num_episodes': None,
         'episode_len': None,
         'camera_names': ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist'],
@@ -122,6 +122,14 @@ SIM_TASK_CONFIGS = {
         'episode_len': None,
         'camera_names': ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist'],
     },
+
+    'marker_cap': {
+        'dataset_dir': DATA_DIR + '/marker_cap',
+        'num_episodes': None,
+        'episode_len': None,
+        'camera_names': ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist'],
+    },
+
 
 }
 

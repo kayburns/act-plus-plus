@@ -56,6 +56,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 except:
                     is_sim = False
                 compressed = root.attrs.get('compress', False)
+                # root = filter_excluded_data(root)
                 if '/base_action' in root:
                     base_action = root['/base_action'][()]
                     base_action = preprocess_base_action(base_action)
@@ -144,16 +145,43 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
         # print(image_data.dtype, qpos_data.dtype, action_data.dtype, is_pad.dtype)
         return image_data, qpos_data, action_data, is_pad
+    
+
+def filter_excluded_data(loaded_hdf5):
+    if not 'task' in loaded_hdf5:
+        return loaded_hdf5  # No filtering needed
+
+    data = loaded_hdf5['task'][()]
+    idx = np.array(data) == b'play'
+    arr = [key for key in loaded_hdf5['observations'].keys()]
+    length = len([temp for temp in idx if temp])
+    # Create a new dictionary to store filtered datasets
+    filtered_data = loaded_hdf5['action'][:length]
+    # Resize the dataset to match the filtered data
+    del loaded_hdf5['action']  # Delete existing dataset first
+    loaded_hdf5.create_dataset('action', data=filtered_data)
+    for key in arr:
+        if key != 'images':
+            filtered_data = loaded_hdf5['observations'][key][:length]
+            del loaded_hdf5['observations'][key]
+            loaded_hdf5['observations'].create_dataset(key, data=filtered_data)
+        else:
+            for cam in ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist']:
+                filtered_data = loaded_hdf5['observations']['images'][cam][:length]
+                del loaded_hdf5['observations']['images'][cam]
+                loaded_hdf5['observations']['images'].create_dataset(cam, data=filtered_data)
+
+    return loaded_hdf5
 
 
 def get_norm_stats(dataset_path_list):
     all_qpos_data = []
     all_action_data = []
     all_episode_len = []
-
     for dataset_path in dataset_path_list:
         try:
             with h5py.File(dataset_path, 'r') as root:
+                # root = filter_excluded_data(root)
                 qpos = root['/observations/qpos'][()]
                 qvel = root['/observations/qvel'][()]
                 if '/base_action' in root:
@@ -164,6 +192,7 @@ def get_norm_stats(dataset_path_list):
                     action = root['/action'][()]
                     dummy_base_action = np.zeros([action.shape[0], 2])
                     action = np.concatenate([action, dummy_base_action], axis=-1)
+
         except Exception as e:
             print(f'Error loading {dataset_path} in get_norm_stats')
             print(e)
@@ -265,9 +294,9 @@ def load_data(dataset_dir_l, name_filter, camera_names, batch_size_train, batch_
     train_num_workers = 16 if train_dataset.augment_images else 2
     val_num_workers = 8 if train_dataset.augment_images else 2
     print(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
-    train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler_train, pin_memory=True, num_workers=train_num_workers, prefetch_factor=2)
-    val_dataloader = DataLoader(val_dataset, batch_sampler=batch_sampler_val, pin_memory=True, num_workers=val_num_workers, prefetch_factor=2)
-
+    train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler_train, pin_memory=True, num_workers=2, prefetch_factor=2)# num_workers=train_num_workers, prefetch_factor=2)
+    val_dataloader = DataLoader(val_dataset, batch_sampler=batch_sampler_val, pin_memory=True, num_workers=2, prefetch_factor=2)#num_workers=val_num_workers, prefetch_factor=2)
+    # import pdb; pdb.set_trace()
     return train_dataloader, val_dataloader, norm_stats, train_dataset.is_sim
 
 def calibrate_linear_vel(base_action, c=None):
