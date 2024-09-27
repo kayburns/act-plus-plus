@@ -26,8 +26,10 @@ python3 imitate_episodes.py \
     --policy_class ${POLICY_CLASS} \
     --kl_weight 10 --chunk_size 100 --hidden_dim 512 \
     --batch_size ${BATCH_SIZE} --dim_feedforward 3200 \
-    --seed ${SEED} --num_steps 200000  --lr 1e-5 \
-    --logging_mode disabled
+    --seed ${SEED} --num_steps 200000  --lr 1e-6 \
+    --logging_mode online  --fine_tune_last_layers \
+    --load_pretrain /iris/u/zachwitz/suvir_data/jelly-bean/policy_step_200000_seed_1.ckpt
+
     # --logging_mode disabled --fine_tune_last_layers \
     # --load_pretrain /iris/u/kayburns/threading_the_needle/act-plus-plus/ckpt/ACT_aloha_thread_blue_needle_glue_1_04_06_2024_13_51_46/policy_step_200000_seed_1.ckpt
 

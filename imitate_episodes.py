@@ -539,7 +539,7 @@ def forward_pass(data, policy):
 
 
 def train_bc(train_dataloader, val_dataloader, config):
-    num_steps = config['num_steps']
+    num_steps = config['num_steps']  # Number of optimizer steps
     ckpt_dir = config['ckpt_dir']
     seed = config['seed']
     policy_class = config['policy_class']
@@ -547,6 +547,7 @@ def train_bc(train_dataloader, val_dataloader, config):
     eval_every = config['eval_every']
     validate_every = config['validate_every']
     save_every = config['save_every']
+    NUM_ACCUMULATION_STEPS = 8  # Accumulate gradients over 8 steps
 
     set_seed(seed)
 
@@ -562,61 +563,80 @@ def train_bc(train_dataloader, val_dataloader, config):
 
     min_val_loss = np.inf
     best_ckpt_info = None
-    
+
     train_dataloader = repeater(train_dataloader)
-    for step in tqdm(range(num_steps+1)):
-        # validation
-        if step % validate_every == 0:
-            print('validating')
-            # import pdb; pdb.set_trace()
-            with torch.inference_mode():
-                policy.eval()
-                validation_dicts = []
-                for batch_idx, data in enumerate(val_dataloader):
-                    forward_dict = forward_pass(data, policy)
-                    validation_dicts.append(forward_dict)
-                    if batch_idx > 50:
-                        break
 
-                validation_summary = compute_dict_mean(validation_dicts)
+    total_iterations = num_steps * NUM_ACCUMULATION_STEPS
+    accumulation_counter = 0
+    running_loss = 0
+    optimizer.zero_grad()
+    step = 0  # Optimizer step counter
 
-                epoch_val_loss = validation_summary['loss']
-                if epoch_val_loss < min_val_loss:
-                    min_val_loss = epoch_val_loss
-                    best_ckpt_info = (step, min_val_loss, deepcopy(policy.serialize()))
-            for k in list(validation_summary.keys()):
-                validation_summary[f'val_{k}'] = validation_summary.pop(k)       
-            wandb.log(validation_summary, step=step)
-            print(f'Val loss:   {epoch_val_loss:.5f}')
-            summary_string = ''
-            for k, v in validation_summary.items():
-                summary_string += f'{k}: {v.item():.3f} '
-            print(summary_string)
-                
-        # evaluation
-        if (step > 0) and (step % eval_every == 0):
-            # first save then eval
-            ckpt_name = f'policy_step_{step}_seed_{seed}.ckpt'
-            ckpt_path = os.path.join(ckpt_dir, ckpt_name)
-            torch.save(policy.serialize(), ckpt_path)
-            # success, _ = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
-            # wandb.log({'success': success}, step=step)
-
-        # training
+    for iteration in tqdm(range(total_iterations)):
+        # Training
         policy.train()
-        optimizer.zero_grad()
         data = next(train_dataloader)
         forward_dict = forward_pass(data, policy)
-        # backward
         loss = forward_dict['loss']
+        running_loss += loss.item()
+        loss = loss / NUM_ACCUMULATION_STEPS  # Normalize loss
         loss.backward()
-        optimizer.step()
-        wandb.log(forward_dict, step=step) # not great, make training 1-2% slower
+        accumulation_counter += 1
 
-        if step % save_every == 0:
-            ckpt_path = os.path.join(ckpt_dir, f'policy_step_{step}_seed_{seed}.ckpt')
-            torch.save(policy.serialize(), ckpt_path)
+        if accumulation_counter % NUM_ACCUMULATION_STEPS == 0:
+            optimizer.step()
+            optimizer.zero_grad()
+            accumulation_counter = 0
 
+            # Increment optimizer step
+            step += 1
+
+            # Validation
+            if step % validate_every == 0:
+                print('Validating...')
+                with torch.inference_mode():
+                    policy.eval()
+                    validation_dicts = []
+                    for batch_idx, data in enumerate(val_dataloader):
+                        forward_dict = forward_pass(data, policy)
+                        validation_dicts.append(forward_dict)
+                        if batch_idx > 50:
+                            break
+
+                    validation_summary = compute_dict_mean(validation_dicts)
+                    epoch_val_loss = validation_summary['loss']
+                    if epoch_val_loss < min_val_loss:
+                        min_val_loss = epoch_val_loss
+                        best_ckpt_info = (step, min_val_loss, deepcopy(policy.serialize()))
+                for k in list(validation_summary.keys()):
+                    validation_summary[f'val_{k}'] = validation_summary.pop(k)
+                wandb.log(validation_summary, step=step)
+                print(f'Val loss: {epoch_val_loss:.5f}')
+                summary_string = ''
+                for k, v in validation_summary.items():
+                    summary_string += f'{k}: {v.item():.3f} '
+                print(summary_string)
+
+            # Evaluation
+            if (step > 0) and (step % eval_every == 0):
+                ckpt_name = f'policy_step_{step}_seed_{seed}.ckpt'
+                ckpt_path = os.path.join(ckpt_dir, ckpt_name)
+                torch.save(policy.serialize(), ckpt_path)
+                # Uncomment the following lines if you have an eval function
+                # success, _ = eval_bc(config, ckpt_name, save_episode=True, num_rollouts=10)
+                # wandb.log({'success': success}, step=step)
+
+            # Logging
+            avg_loss = running_loss / NUM_ACCUMULATION_STEPS
+            wandb.log({'loss': avg_loss}, step=step)
+            running_loss = 0
+
+            # Save Checkpoint
+            if step % save_every == 0:
+                ckpt_path = os.path.join(ckpt_dir, f'policy_step_{step}_seed_{seed}_gradacc.ckpt')
+                torch.save(policy.serialize(), ckpt_path)
+
+    # Save final model
     ckpt_path = os.path.join(ckpt_dir, f'policy_last.ckpt')
     torch.save(policy.serialize(), ckpt_path)
 

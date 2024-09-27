@@ -130,6 +130,13 @@ SIM_TASK_CONFIGS = {
         'camera_names': ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist'],
     },
 
+    'jelly-bean': {
+        'dataset_dir': DATA_DIR + '/jelly-bean',
+        'num_episodes': None,
+        'episode_len': None,
+        'camera_names': ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist'],
+    },
+
 
 }
 
